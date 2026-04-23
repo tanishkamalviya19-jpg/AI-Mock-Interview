@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Mock Interviewer</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f0f1a; color: #fff; min-height: 100vh; }
+        .container { max-width: 800px; margin: 0 auto; padding: 40px 20px; }
+        h1 { text-align: center; color: #7c3aed; font-size: 2rem; margin-bottom: 10px; }
+        .subtitle { text-align: center; color: #888; margin-bottom: 40px; }
+        .card { background: #1a1a2e; border-radius: 16px; padding: 30px; margin-bottom: 20px; border: 1px solid #2a2a4a; }
+        label { display: block; margin-bottom: 8px; color: #aaa; font-size: 0.9rem; }
+        input, select { width: 100%; padding: 12px; background: #0f0f1a; border: 1px solid #2a2a4a; border-radius: 8px; color: #fff; font-size: 1rem; margin-bottom: 20px; }
+        button { width: 100%; padding: 14px; background: #7c3aed; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; font-weight: 600; }
+        button:hover { background: #6d28d9; }
+        .question-box { display: none; }
+        .question-text { font-size: 1.2rem; color: #e2e8f0; margin-bottom: 8px; }
+        .topic-badge { display: inline-block; background: #7c3aed33; color: #a78bfa; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; margin-bottom: 20px; }
+        textarea { width: 100%; padding: 12px; background: #0f0f1a; border: 1px solid #2a2a4a; border-radius: 8px; color: #fff; font-size: 1rem; height: 150px; resize: vertical; margin-bottom: 20px; }
+        .result-box { display: none; }
+        .score { font-size: 3rem; font-weight: 700; color: #7c3aed; text-align: center; margin-bottom: 20px; }
+        .feedback-item { margin-bottom: 16px; }
+        .feedback-label { font-size: 0.8rem; color: #888; margin-bottom: 4px; }
+        .feedback-text { color: #e2e8f0; line-height: 1.6; }
+        .good { border-left: 3px solid #10b981; padding-left: 12px; }
+        .missing { border-left: 3px solid #ef4444; padding-left: 12px; }
+        .ideal { border-left: 3px solid #3b82f6; padding-left: 12px; }
+        .loading { text-align: center; color: #7c3aed; display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 AI Mock Interviewer</h1>
+        <p class="subtitle">Practice technical interviews with AI feedback</p>
+
+        <div class="card" id="setup-card">
+            <label>Your Tech Stack (e.g. Python, Flask, DSA)</label>
+            <input type="text" id="tech-stack" placeholder="Python, Flask, SQL, DSA">
+            <label>Difficulty Level</label>
+            <select id="difficulty">
+                <option>Easy</option>
+                <option selected>Medium</option>
+                <option>Hard</option>
+            </select>
+            <button onclick="getQuestion()">Generate Question 🚀</button>
+        </div>
+
+        <div class="loading" id="loading1">⏳ Generating your question...</div>
+
+        <div class="card question-box" id="question-card">
+            <div class="topic-badge" id="topic"></div>
+            <div class="question-text" id="question"></div>
+        </div>
+
+        <div class="card question-box" id="answer-card">
+            <label>Your Answer</label>
+            <textarea id="answer" placeholder="Type your answer here..."></textarea>
+            <button onclick="evaluateAnswer()">Evaluate My Answer ✨</button>
+        </div>
+
+        <div class="loading" id="loading2">⏳ Evaluating your answer...</div>
+
+        <div class="card result-box" id="result-card">
+            <div class="score" id="score"></div>
+            <div class="feedback-item good">
+                <div class="feedback-label">✅ What was good</div>
+                <div class="feedback-text" id="good"></div>
+            </div>
+            <div class="feedback-item missing">
+                <div class="feedback-label">❌ What was missing</div>
+                <div class="feedback-text" id="missing"></div>
+            </div>
+            <div class="feedback-item ideal">
+                <div class="feedback-label">💡 Ideal Answer</div>
+                <div class="feedback-text" id="ideal"></div>
+            </div>
+            <br>
+            <button onclick="location.reload()">Try Another Question 🔄</button>
+        </div>
+    </div>
+
+    <script>
+        let currentQuestion = "";
+
+        async function getQuestion() {
+            const techStack = document.getElementById("tech-stack").value;
+            const difficulty = document.getElementById("difficulty").value;
+            if (!techStack) { alert("Please enter your tech stack!"); return; }
+
+            document.getElementById("loading1").style.display = "block";
+            document.getElementById("setup-card").style.display = "none";
+
+            const res = await fetch("/get_question", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({tech_stack: techStack, difficulty: difficulty})
+            });
+            const data = await res.json();
+            currentQuestion = data.question;
+
+            document.getElementById("loading1").style.display = "none";
+            document.getElementById("topic").textContent = data.topic;
+            document.getElementById("question").textContent = data.question;
+            document.querySelectorAll(".question-box").forEach(el => el.style.display = "block");
+        }
+
+        async function evaluateAnswer() {
+            const answer = document.getElementById("answer").value;
+            if (!answer) { alert("Please write your answer!"); return; }
+
+            document.getElementById("loading2").style.display = "block";
+            document.getElementById("answer-card").style.display = "none";
+
+            const res = await fetch("/evaluate", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({question: currentQuestion, answer: answer})
+            });
+            const data = await res.json();
+
+            document.getElementById("loading2").style.display = "none";
+            document.getElementById("score").textContent = data.score + "/" + data.out_of;
+            document.getElementById("good").textContent = data.good;
+            document.getElementById("missing").textContent = data.missing;
+            document.getElementById("ideal").textContent = data.ideal_answer;
+            document.getElementById("result-card").style.display = "block";
+        }
+    </script>
+</body>
+</html>
